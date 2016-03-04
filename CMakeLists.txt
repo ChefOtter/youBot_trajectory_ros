@@ -9,9 +9,11 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   brics_actuator
   geometry_msgs
-  moveit_core
-  moveit_ros_planning_interface
+  ik_solver_service
+  cmake_modules
 )
+find_package(Eigen REQUIRED)
+find_package(Boost REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -106,8 +108,6 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES youbot_draw
  CATKIN_DEPENDS 
- moveit_core 
- moveit_ros_planning_interface
  geometry_msgs
  brics_actuator
 #  DEPENDS system_lib
@@ -122,6 +122,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIR}
 )
 
@@ -137,15 +138,16 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(youbot_draw_node src/youbot_draw_node.cpp)
-add_executable(youbot_draw_node src/youbot_arm_draw.cpp)
+add_executable(draw_test src/draw_square_test.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(youbot_draw_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(youbot_draw_node
+target_link_libraries(draw_test
   ${catkin_LIBRARIES}
+  ${Eigen_LIBRARIES}
   ${Boost_LIBRARIES}
 )
 
