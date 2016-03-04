@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 
 static const uint NUM_ARM_JOINTS = 5;
+static const uint NUM_INTERMEDIATE_POINTS = 8;
 double HOME_POS[] = {0.05, 0.05, -0.05, 0.05, 0.1107};
 ros::Publisher armPositionsPublisher;
 
@@ -37,6 +38,47 @@ brics_actuator::JointPositions generateJointPositionMsg(double* joints)
   return joint_position_msg;
 }
 
+std::vector<geometry_msgs::Point> getOctagon(geometry_msgs::Point center, double radius)
+{
+	std::vector<geometry_msgs::Point> out;
+	out.resize(8);
+
+	double half_length = radius * sin(M_PI_4*0.5);
+	out[0].x = center.x;
+	out[0].y = center.y + half_length;
+	out[0].z = center.z + half_length*(1 + sqrt(2.0));
+
+	out[1].x = center.x;
+	out[1].y = center.y - half_length;
+	out[1].z = out[0].z;
+
+	out[2].x = center.x;
+	out[2].y = center.y - half_length*(1 + sqrt(2.0));
+	out[2].z = center.z + half_length;
+
+	out[3].x = center.x;
+	out[3].y = out[2].y;
+	out[3].z = center.z - half_length;
+
+	out[4].x = center.x;
+	out[4].y = out[1].y;
+	out[4].z = center.z - half_length*(1 + sqrt(2.0));
+
+	out[5].x = center.x;
+	out[5].y = out[0].y;
+	out[5].z = out[4].z;
+
+	out[6].x = center.x;
+	out[6].y = center.y + half_length*(1 + sqrt(2.0));
+	out[6].z = out[3].z;
+
+	out[7].x = center.x;
+	out[7].y = out[6].y;
+	out[7].z = out[2].z;
+
+	return out;
+}
+
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "draw_square_test");
@@ -49,6 +91,86 @@ int main(int argc, char** argv)
 	// declare trajectory generator service
 	ros::ServiceClient traj_client = nh.serviceClient<trajectory_generator::CStoCS_Pitch>("From_CS_to_CS_Pitch");
 
+
+	geometry_msgs::Point center,pt_tmp;
+	std::vector<geometry_msgs::Point> pts;
+	double pitch = 0.0;
+	double radius = 0.5;
+	center.x = 0.4;
+	center.y = 0.0;
+	center.z = 0.3;
+	// define the outer octagon
+	pts = getOctagon(center, radius);
+	pts.push_back(pts[0]);
+	//pull out from drawing surface
+	pt_tmp = pts[0];
+	pt_tmp.x -= 0.01;
+	pts.push_back(pt_tmp);
+
+	// define the inner octagon
+	std::vector<geometry_msgs::Point> pts_tmp;
+	pts_tmp = getOctagon(center, radius*0.75);
+	// distance between outer and inner octagon
+	double diff = radius*0.25*cos(M_PI_4*0.5);
+	double half_length_inner = 0.75*radius * sin(M_PI_4*0.5);
+	pt_tmp = pts_tmp[0];
+	pt_tmp.x -= 0.01;
+	pts.push_back(pt_tmp);
+
+	pts.insert(pts.end(), pts_tmp.begin(), pts_tmp.begin()+2);
+
+	pt_tmp = pts_tmp[2];
+	pt_tmp.y += pts_tmp[1].y + diff;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.z = pts_tmp[3].z;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.y = pts_tmp[5].y - diff;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.z = pts_tmp[7].z;
+	pts.push_back(pt_tmp);
+
+	pts.push_back(pts_tmp[7]);
+	pts.push_back(pts_tmp[0]);
+
+	pt_tmp = pts_tmp[0];
+	pt_tmp.x -= 0.01;
+	pts.push_back(pt_tmp);
+
+	pt_tmp = pts_tmp[7];
+	pt_tmp.x -= 0.01;
+	pt_tmp.z -= diff;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.x = pts_tmp[7].x;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.y = pts_tmp[0].y;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.z = pts_tmp[3].z - diff;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.y = pts_tmp[1].y;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.z = pts_tmp[2].z - diff;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.y = pts_tmp[2].y;
+	pts.push_back(pt_tmp);
+
+	for(int i = 0; i < 4; i++)
+	{
+		pts.push_back(pts_tmp[i+3]);
+	}
+
+	pt_tmp.y = pts_tmp[7].y;
+	pts.push_back(pt_tmp);
+
+
 	double max_vel = 0.05;
 	double max_acc = 0.5;
 	ROS_INFO("max_vel: %f \t max_acc :%f", max_vel, max_acc);
@@ -59,163 +181,50 @@ int main(int argc, char** argv)
 	trajectory_msgs::JointTrajectoryPoint point;
 	trajectory_generator::CStoCS_Pitch traj_srv;
 
-	// define the square to draw
-	geometry_msgs::Point pt1, pt2, pt3, pt4;
-	double pitch = 0.0;
-	pt1.x = 0.386;
-	pt1.y = 0.0;
-	pt1.z = 0.3;
-
-	pt2.x = 0.386;
-	pt2.y = -0.1;
-	pt2.z = 0.3;
-
-	pt3.x = 0.386;
-	pt3.y = -0.1;
-	pt3.z = 0.25;
-
-	pt4.x = 0.386;
-	pt4.y = 0.0;
-	pt4.z = 0.25;
-
-	traj_srv.request.start_pos = pt1;
-	traj_srv.request.end_pos = pt2;
-	traj_srv.request.start_pitch = pitch;
-	traj_srv.request.end_pitch = pitch;
-	traj_srv.request.start_vel = 0.0;
-	traj_srv.request.end_vel = 0.0;
-	traj_srv.request.max_vel = max_vel;
-	traj_srv.request.max_acc = max_acc;
-
-	if (traj_client.call(traj_srv))
+	ROS_INFO("Generating trajectories, please wait...");
+	for (int i = 0; i < pts.size()-1; i++)
 	{
-		if (traj_srv.response.feasible)
-	    {
-	      std::cout << "1st segment feasible" << std::endl;
-	      temp = traj_srv.response.trajectory;
-	      while (!temp.points.empty())
-	      {
-	        point = temp.points.back();
-	        temp.points.pop_back();
-	        traj.points.insert(traj.points.begin(), point);
-	      }
-	      traj.joint_names = temp.joint_names;
-	    }
-	    else
-	    {
-	      std::cout << "1st segment Not Feasible" << std::endl;
-	      feasible = false;
-	    }
-	}
-	else
-	{
-		ROS_ERROR("Could not call service.");
-	    return 1;
-	}
-
-	traj_srv.request.start_pos = pt2;
-	traj_srv.request.end_pos = pt3;
-	traj_srv.request.start_pitch = pitch;
-	traj_srv.request.end_pitch = pitch;
-	traj_srv.request.start_vel = 0.0;
-	traj_srv.request.end_vel = 0.0;
-	traj_srv.request.max_vel = max_vel;
-	traj_srv.request.max_acc = max_acc;
-
-	if (traj_client.call(traj_srv))
-	{
-		if (traj_srv.response.feasible)
-	    {
-	      std::cout << "2nd segment feasible" << std::endl;
-	      temp = traj_srv.response.trajectory;
-	      while (!temp.points.empty())
-	      {
-	        point = temp.points.back();
-	        temp.points.pop_back();
-	        traj.points.insert(traj.points.begin(), point);
-	      }
-	      traj.joint_names = temp.joint_names;
-	    }
-	    else
-	    {
-	      std::cout << "2nd segment Not Feasible" << std::endl;
-	      feasible = false;
-	    }
-	}
-	else
-	{
-		ROS_ERROR("Could not call service.");
-	    return 1;
-	}
-
-	traj_srv.request.start_pos = pt3;
-	traj_srv.request.end_pos = pt4;
-	traj_srv.request.start_pitch = pitch;
-	traj_srv.request.end_pitch = pitch;
-	traj_srv.request.start_vel = 0.0;
-	traj_srv.request.end_vel = 0.0;
-	traj_srv.request.max_vel = max_vel;
-	traj_srv.request.max_acc = max_acc;
-
-	if (traj_client.call(traj_srv))
-	{
-		if (traj_srv.response.feasible)
-	    {
-	      std::cout << "3rd segment feasible" << std::endl;
-	      temp = traj_srv.response.trajectory;
-	      while (!temp.points.empty())
-	      {
-	        point = temp.points.back();
-	        temp.points.pop_back();
-	        traj.points.insert(traj.points.begin(), point);
-	      }
-	      traj.joint_names = temp.joint_names;
-	    }
-	    else
-	    {
-	      std::cout << "3rd segment Not Feasible" << std::endl;
-	      feasible = false;
-	    }
-	}
-	else
-	{
-		ROS_ERROR("Could not call service.");
-	    return 1;
-	}
-
-	traj_srv.request.start_pos = pt4;
-	traj_srv.request.end_pos = pt1;
-	traj_srv.request.start_pitch = pitch;
-	traj_srv.request.end_pitch = pitch;
-	traj_srv.request.start_vel = 0.0;
-	traj_srv.request.end_vel = 0.0;
-	traj_srv.request.max_vel = max_vel;
-	traj_srv.request.max_acc = max_acc;
-
-	if (traj_client.call(traj_srv))
-	{
-		if (traj_srv.response.feasible)
-	    {
-	      std::cout << "4th segment feasible" << std::endl;
-	      temp = traj_srv.response.trajectory;
-	      while (!temp.points.empty())
-	      {
-	        point = temp.points.back();
-	        temp.points.pop_back();
-	        traj.points.insert(traj.points.begin(), point);
-	      }
-	      traj.joint_names = temp.joint_names;
-	    }
-	    else
-	    {
-	      std::cout << "4th segment Not Feasible" << std::endl;
-	      feasible = false;
-	    }
-	}
-	else
-	{
-		ROS_ERROR("Could not call service.");
-	    return 1;
+		traj_srv.request.start_pos = pts[i];
+		if (i < (pts.size()-1))
+		{
+			traj_srv.request.end_pos = pts[i+1];
+		}
+		else
+		{
+			traj_srv.request.end_pos = pts[0];
+		}
+		traj_srv.request.start_pitch = pitch;
+		traj_srv.request.end_pitch = pitch;
+		traj_srv.request.start_vel = 0.0;
+		traj_srv.request.end_vel = 0.0;
+		traj_srv.request.max_vel = max_vel;
+		traj_srv.request.max_acc = max_acc;
+		if (traj_client.call(traj_srv))
+		{
+			if (traj_srv.response.feasible)
+		    {
+//		      std::cout << "segment feasible" << std::endl;
+		      temp = traj_srv.response.trajectory;
+		      while (!temp.points.empty())
+		      {
+		        point = temp.points.back();
+		        temp.points.pop_back();
+		        traj.points.insert(traj.points.begin(), point);
+		      }
+		      traj.joint_names = temp.joint_names;
+		    }
+		    else
+		    {
+		      std::cout << "1st segment Not Feasible" << std::endl;
+		      ROS_WARN("Segment %d Not Feasible", i+1);
+		      feasible = false;
+		    }
+		}
+		else
+		{
+			ROS_ERROR("Could not call service.");
+		    return 1;
+		}
 	}
 
 	// go to start pose
@@ -224,6 +233,8 @@ int main(int argc, char** argv)
 		ROS_WARN("Trajectory is not feasible! Quit");
 		return 1;
 	}
+	ROS_INFO("Done");
+
 	point = traj.points.back();
 	int i = 0;
 	while (!point.positions.empty())
@@ -232,7 +243,7 @@ int main(int argc, char** argv)
 	    i++;
 	    point.positions.pop_back();
 	}
-	ROS_INFO("Move to ready pose.");
+	ROS_INFO("Move to ready pose");
 
 	ros::spinOnce();
 	i = 0;
@@ -244,10 +255,11 @@ int main(int argc, char** argv)
 		rate.sleep();
 	}
 
-    ROS_INFO("READY TO DRAW?");
+    ROS_INFO("Ready to draw?");
     int x;
     std::cin >> x;
 
+    ROS_INFO("Start drawing...");
     while (nh.ok() && (!traj.points.empty()))
     {
     	// retrieve current joint value
@@ -263,9 +275,11 @@ int main(int argc, char** argv)
     	armPositionsPublisher.publish(generateJointPositionMsg(cur_joint_val));
     	rate.sleep();
     }
+    ROS_INFO("Done");
 
 	sleep(5.0);
 	// go back to home position
+	ROS_INFO("Back to home position");
 	armPositionsPublisher.publish(generateJointPositionMsg(HOME_POS));
 
 	return 0;
