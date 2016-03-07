@@ -1,4 +1,5 @@
 # youBot_trajectory_ros
-This repository contains source code to conrol youbot arm via Moveit.
+This repository contains source code to draw shapes with youbot arm.
 
-dependency: move_group for youbot (e.g. youbot-manipulation)
+dependency: IK solver service
+            Trajectory generator service
