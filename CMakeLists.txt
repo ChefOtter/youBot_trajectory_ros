@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   ik_solver_service
   cmake_modules
 )
-find_package(Eigen REQUIRED)
+#find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED)
 
 ## System dependencies are found with CMake's conventions
@@ -122,7 +122,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${Eigen_INCLUDE_DIRS}
+#  ${Eigen_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIR}
 )
 
@@ -138,16 +138,16 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(youbot_draw_node src/youbot_draw_node.cpp)
-add_executable(draw_test src/draw_square_test.cpp)
+add_executable(draw_TU_logo src/draw_square_test.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(youbot_draw_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(draw_test
+target_link_libraries(draw_TU_logo
   ${catkin_LIBRARIES}
-  ${Eigen_LIBRARIES}
+#  ${Eigen_LIBRARIES}
   ${Boost_LIBRARIES}
 )
 

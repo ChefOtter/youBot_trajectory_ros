@@ -8,10 +8,8 @@
 #include <ik_solver_service/SolvePreferredPitchIK.h>
 #include <boost/units/systems/si.hpp>
 #include <boost/units/io.hpp>
-#include <Eigen/Dense>
 
 static const uint NUM_ARM_JOINTS = 5;
-static const uint NUM_INTERMEDIATE_POINTS = 8;
 double HOME_POS[] = {0.05, 0.05, -0.05, 0.05, 0.1107};
 ros::Publisher armPositionsPublisher;
 
@@ -95,10 +93,10 @@ int main(int argc, char** argv)
 	geometry_msgs::Point center,pt_tmp;
 	std::vector<geometry_msgs::Point> pts;
 	double pitch = 0.0;
-	double radius = 0.5;
+	double radius = 0.08;
 	center.x = 0.4;
 	center.y = 0.0;
-	center.z = 0.3;
+	center.z = 0.33;
 	// define the outer octagon
 	pts = getOctagon(center, radius);
 	pts.push_back(pts[0]);
@@ -109,18 +107,18 @@ int main(int argc, char** argv)
 
 	// define the inner octagon
 	std::vector<geometry_msgs::Point> pts_tmp;
-	pts_tmp = getOctagon(center, radius*0.75);
+	pts_tmp = getOctagon(center, radius*0.85);
 	// distance between outer and inner octagon
-	double diff = radius*0.25*cos(M_PI_4*0.5);
+	double diff = radius*0.15*cos(M_PI_4*0.5);
 	double half_length_inner = 0.75*radius * sin(M_PI_4*0.5);
 	pt_tmp = pts_tmp[0];
 	pt_tmp.x -= 0.01;
 	pts.push_back(pt_tmp);
 
-	pts.insert(pts.end(), pts_tmp.begin(), pts_tmp.begin()+2);
+	pts.insert(pts.end(), pts_tmp.begin(), pts_tmp.begin()+3);
 
 	pt_tmp = pts_tmp[2];
-	pt_tmp.y += pts_tmp[1].y + diff;
+	pt_tmp.y = pts_tmp[1].y + diff;
 	pts.push_back(pt_tmp);
 
 	pt_tmp.z = pts_tmp[3].z;
@@ -168,6 +166,9 @@ int main(int argc, char** argv)
 	}
 
 	pt_tmp.y = pts_tmp[7].y;
+	pts.push_back(pt_tmp);
+
+	pt_tmp.x -= 0.01;
 	pts.push_back(pt_tmp);
 
 
